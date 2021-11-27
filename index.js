@@ -55,7 +55,7 @@ client.on("messageCreate", async (message) => {
         "Game started ! Time left: 5:00"
       );
       let timer = setInterval(() => {
-        time -= 1;
+        time -= 5;
         let timeString = "";
         if (time > 60) {
           timeString = Math.floor(time / 60) + ":" + (time % 60);
@@ -67,7 +67,7 @@ client.on("messageCreate", async (message) => {
           sendMessage.edit("Game ended !");
           clearInterval(timer);
         }
-      }, 1000);
+      }, 5000);
     }
   }
 });
