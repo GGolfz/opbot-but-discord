@@ -20,7 +20,7 @@ client.on('ready', () => {
     console.log('Opbot is ready !');
 });
 
-client.on('messageCreate', message => {
+client.on('messageCreate', async (message) => {
     let messageList = message.content.split(" ");
     let topic = "random";
     if (messageList[0] === "!fword") {
