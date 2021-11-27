@@ -48,6 +48,22 @@ client.on('messageCreate', message => {
         }
         user.send(message);
     })
+    let time = 300;
+    let sendMessage = message.channel.send("Game started ! Time left: 5:00");
+    let timer = setInterval(() => {
+        time -= 1;
+        let timeString = "";
+        if (time > 60) {
+            timeString = Math.floor(time / 60) + ":" + (time % 60);
+        } else {
+            timeString = time + "s";
+        }
+        sendMessage.edit("Game started ! Time left: " + timeString);
+        if(time == 0) {
+            sendMessage.edit("Game ended !");
+            clearInterval(timer);
+        }
+    },1000)
 })
 
 
