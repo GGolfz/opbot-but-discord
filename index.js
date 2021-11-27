@@ -49,7 +49,7 @@ client.on('messageCreate', message => {
         user.send(message);
     })
     let time = 300;
-    let sendMessage = message.channel.send("Game started ! Time left: 5:00");
+    let sendMessage = await message.channel.send("Game started ! Time left: 5:00");
     let timer = setInterval(() => {
         time -= 1;
         let timeString = "";
