@@ -1,10 +1,13 @@
 require("dotenv").config();
 const { Client, Intents } = require("discord.js");
+const { joinVoiceChannel, createAudioPlayer,createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
 const client = new Client({
-  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
+  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES],
 });
-
+const downloadMP3 = require("./mp3");
 const wordList = require("./wordList.json");
+var queue = [];
+var audioPlayer;
 
 const getWordListByTopic = (topic) => {
   if (topic === "random") return wordList.map((word) => word.word);
@@ -68,8 +71,54 @@ client.on("messageCreate", async (message) => {
           clearInterval(timer);
         }
       }, 5000);
+    } else if (messageList[0] === "!play") {
+      if (message.member.voice.channel) {
+        if (queue.length == 0) {
+          queue.push(messageList[1]);
+          let connection = await joinVoiceChannel({
+            channelId: message.member.voice.channel.id,
+            guildId: message.guild.id,
+            adapterCreator: message.guild.voiceAdapterCreator,
+          });
+          await play(connection, message);
+        } else {
+          queue.push(messageList[1]);
+        }
+      } else {
+        message.reply("You must be in a voice channel to play a music !");
+      }
+    } else if(messageList[0] === "!stop"){
+      if(audioPlayer){
+        audioPlayer.stop();
+      }
     }
   }
 });
+
+const play = async (connection, message) => {
+  let resource = await downloadMP3(queue[0], "./music/" + queue[0].split("=")[1] + ".mp3");
+  setTimeout(async () => {
+    let audioResource = await createAudioResource("/Users/ggolfz/Desktop/opbot-but-discord" + resource);
+    audioPlayer = createAudioPlayer();
+    
+    audioPlayer.on(AudioPlayerStatus.Playing, () => {
+      console.log("playing");
+      message.reply(`:thumbsup: Now Playing ***${message.content.split(" ")[1]}***`)
+    })
+    audioPlayer.on(AudioPlayerStatus.Idle, () => {
+      if(queue.length > 0){
+        queue.shift();
+        play(connection, message);
+      }
+    })
+    audioPlayer.on("error", (error) => {
+      console.log(error);
+    })
+    audioPlayer.play(audioResource);
+    subscription = connection.subscribe(audioPlayer);
+  }, 2000)
+  
+
+};
 
 client.login(process.env.DISCORDJS_BOT_TOKEN);
