@@ -1,11 +1,21 @@
 require("dotenv").config();
 const { Client, Intents } = require("discord.js");
-const { joinVoiceChannel, createAudioPlayer,createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus,
+} = require("@discordjs/voice");
 const client = new Client({
-  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES],
+  intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.GUILD_VOICE_STATES,
+  ],
 });
 const downloadMP3 = require("./mp3");
 const wordList = require("./wordList.json");
+const fs = require("fs");
 var queue = [];
 var audioPlayer;
 
@@ -15,7 +25,9 @@ const getWordListByTopic = (topic) => {
     .filter((word) => word.topic.toLowerCase() === topic.toLowerCase())
     .map((word) => word.word);
 };
-
+try {
+  fs.mkdirSync("./music");
+} catch (err) {}
 const getWordByTopic = (topic) => {
   let wordList = getWordListByTopic(topic);
   return wordList[Math.floor(Math.random() * wordList.length)];
@@ -74,7 +86,7 @@ client.on("messageCreate", async (message) => {
     } else if (messageList[0] === "!play") {
       if (message.member.voice.channel) {
         if (queue.length == 0) {
-          queue.push(messageList[1]);
+          queue.push(messageList[1].trim());
           let connection = await joinVoiceChannel({
             channelId: message.member.voice.channel.id,
             guildId: message.guild.id,
@@ -82,42 +94,55 @@ client.on("messageCreate", async (message) => {
           });
           await play(connection, message);
         } else {
-          queue.push(messageList[1]);
+          queue.push(messageList[1].trim());
         }
       } else {
         message.reply("You must be in a voice channel to play a music !");
       }
-    } else if(messageList[0] === "!stop"){
-      if(audioPlayer){
+    } else if (messageList[0] === "!stop") {
+      if (audioPlayer) {
         audioPlayer.stop();
       }
     }
   }
 });
-
-const play = async (connection, message) => {
-  let resource = await downloadMP3(queue[0], "./music/" + queue[0].split("=")[1] + ".mp3");
-  setTimeout(async () => {
-    let audioResource = await createAudioResource("/Users/ggolfz/Desktop/opbot-but-discord" + resource);
+const playResource = async (resource, connection, message) => {
+  console.log("Playing: " + resource);
+    let audioResource = createAudioResource(
+      "/Users/ggolfz/Desktop/opbot-but-discord" + resource
+    );
     audioPlayer = createAudioPlayer();
-    
+
     audioPlayer.on(AudioPlayerStatus.Playing, () => {
       console.log("playing");
-      message.reply(`:thumbsup: Now Playing ***${message.content.split(" ")[1]}***`)
-    })
-    audioPlayer.on(AudioPlayerStatus.Idle, () => {
-      if(queue.length > 0){
-        queue.shift();
-        play(connection, message);
-      }
-    })
-    audioPlayer.on("error", (error) => {
-      console.log(error);
-    })
-    audioPlayer.play(audioResource);
+      message.reply(`:thumbsup: Now Playing ***${queue[0]}***`);
+    });
+    setTimeout(() => {
+      audioPlayer.on(AudioPlayerStatus.Idle, () => {
+        if (queue.length > 0) {
+          try {
+            let filename = queue[0].split("=")[1];
+            fs.unlinkSync("music/" + filename + ".mp3");
+            queue.shift();
+            play(connection, message);
+          } catch (err) {}
+        }
+      });
+      audioPlayer.on("error", (error) => {
+        console.log(error);
+      });
+      audioPlayer.play(audioResource);
+    }, 10000)
+    
+
     subscription = connection.subscribe(audioPlayer);
-  }, 2000)
-  
+  }
+const play = async (connection, message) => {
+  let resource = await downloadMP3(
+    queue[0],
+    "./music/" + queue[0].split("=")[1] + ".mp3"
+  );
+  await playResource(resource, connection, message);
 
 };
 
